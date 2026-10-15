@@ -266,11 +266,56 @@ function ProductForm({ product, products, categories: initialCategories, onCateg
   );
 }
 
-// Lists the categories with how many products each has; empty ones can be deleted.
+// Asks where a category's products should go before it is deleted.
+function MoveAndDelete({ category, categories, onConfirm, onCancel }) {
+  const others = categories.filter(c => c._id !== category._id);
+  const [moveTo, setMoveTo] = useState(others[0]?.key || '');
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const n = category.productCount;
+
+  const submit = async e => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await onConfirm(moveTo);
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} noValidate>
+      <div className="modal__body">
+        {error && <div className="notice notice--error" role="alert">{error}</div>}
+        {others.length ? (
+          <>
+            <p className="confirm-text">“{category.label}” has <strong>{n} product{n === 1 ? '' : 's'}</strong>. Choose where {n === 1 ? 'it goes' : 'they go'}, then the category is deleted.</p>
+            <Field label={`Move ${n === 1 ? 'its product' : `its ${n} products`} to`}>
+              <select className="input" value={moveTo} onChange={e => setMoveTo(e.target.value)} data-autofocus>
+                {others.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+              </select>
+            </Field>
+          </>
+        ) : (
+          <p className="confirm-text">“{category.label}” is the only category, so its products have nowhere to go. Add another category first.</p>
+        )}
+      </div>
+      <div className="modal__foot">
+        <button type="button" className="btn btn--ghost" onClick={onCancel}>Cancel</button>
+        {others.length > 0 && <button className="btn btn--danger" disabled={busy || !moveTo}>{busy ? 'Moving…' : `Move and delete`}</button>}
+      </div>
+    </form>
+  );
+}
+
+// Lists the categories with how many products each has, with a delete button for each.
 function CategoryManager({ categories, onDelete }) {
   return (
     <div className="modal__body">
-      <p className="muted category-note">A category can be deleted once it has no products. Move its products to another category first.</p>
+      <p className="muted category-note">Deleting a category that has products moves them to another category you choose. No products are deleted.</p>
       {categories.length === 0 && <p className="category-empty">No categories yet. Add one from a product form with “＋ Add a new category…”.</p>}
       <ul className={`category-list${categories.length ? '' : ' is-empty'}`}>
         {categories.map(c => (
@@ -282,9 +327,8 @@ function CategoryManager({ categories, onDelete }) {
               type="button"
               className="icon-btn icon-btn--danger"
               onClick={() => onDelete(c)}
-              disabled={c.productCount > 0}
               aria-label={`Delete ${c.label}`}
-              title={c.productCount > 0 ? 'Move or delete its products first' : `Delete ${c.label}`}
+              title={`Delete ${c.label}`}
             >
               <Trash size={18} />
             </button>
@@ -307,6 +351,7 @@ export default function Products() {
   const [stock, setStock] = useState('all');
   const [editing, setEditing] = useState(null);
   const [managing, setManaging] = useState(false);
+  const [moving, setMoving] = useState(null); // a category with products being deleted
 
   const all = (data || []).map(view);
   const byId = new Map(all.map(p => [p._id, p]));
@@ -341,17 +386,30 @@ export default function Products() {
 
   const outCount = all.filter(p => !p.isAvailable).length;
 
+  const categoryDeleted = async (c, movedTo) => {
+    if (category === c.key) setCategory('all');
+    await Promise.all([reloadCategories(), reload()]);
+    const target = movedTo && categories.find(x => x.key === movedTo)?.label;
+    toast(target ? `“${c.label}” deleted; ${c.productCount} product${c.productCount === 1 ? '' : 's'} moved to “${target}”` : `Category “${c.label}” deleted`);
+  };
+
   const deleteCategory = async c => {
+    if (c.productCount > 0) return setMoving(c);
     const ok = await confirm({ title: `Delete “${c.label}”?`, message: 'It will be removed from the category list. This can’t be undone.', confirmLabel: 'Delete category', danger: true });
     if (!ok) return;
     try {
       await categoryApi.remove(c._id);
-      if (category === c.key) setCategory('all');
-      await reloadCategories();
-      toast(`Category “${c.label}” deleted`);
+      await categoryDeleted(c, null);
     } catch (err) {
       toast(err.message, 'critical');
     }
+  };
+
+  const moveAndDelete = async moveTo => {
+    const c = moving;
+    await categoryApi.remove(c._id, moveTo);
+    setMoving(null);
+    await categoryDeleted(c, moveTo);
   };
 
   return (
@@ -455,6 +513,9 @@ export default function Products() {
       </Modal>
       <Modal open={managing} onClose={() => setManaging(false)} title="Categories">
         {managing && categories && <CategoryManager categories={categories} onDelete={deleteCategory} />}
+      </Modal>
+      <Modal open={Boolean(moving)} onClose={() => setMoving(null)} title={moving ? `Delete “${moving.label}”` : ''}>
+        {moving && categories && <MoveAndDelete category={moving} categories={categories} onConfirm={moveAndDelete} onCancel={() => setMoving(null)} />}
       </Modal>
       {confirmDialog}
     </>

@@ -121,16 +121,22 @@ categories.get('/', async (req, res) => {
   res.json(list.map(c => ({ ...c, productCount: counts[c.key] || 0 })));
 });
 
-// Only empty categories can be deleted, so no product is left without one.
+// Deletes a category. If it still has products, `?moveTo=<category key>` says where they go first,
+// so no product is ever left without a category.
 categories.delete('/:id', async (req, res) => {
   const category = await store.findById('categories', req.params.id);
   if (!category) throw notFound('This category no longer exists.');
   const used = await store.count('products', { category: category.key });
   if (used) {
-    throw conflict(`“${category.label}” still has ${used} product${used > 1 ? 's' : ''}. Move ${used > 1 ? 'them' : 'it'} to another category or delete ${used > 1 ? 'them' : 'it'} first.`);
+    const moveTo = String(req.query.moveTo || '');
+    const plural = used > 1;
+    if (!moveTo) throw conflict(`“${category.label}” has ${used} product${plural ? 's' : ''}. Choose a category to move ${plural ? 'them' : 'it'} to.`);
+    if (moveTo === category.key) throw badRequest('Pick a different category to move the products to.');
+    if (!(await store.findOne('categories', { key: moveTo }))) throw badRequest('The category to move them to no longer exists.');
+    await store.updateMany('products', { category: category.key }, { category: moveTo, updatedAt: nowIso() });
   }
   await store.remove('categories', category._id);
-  res.status(204).end();
+  res.json({ deleted: category.key, moved: used, movedTo: used ? String(req.query.moveTo) : null });
 });
 
 categories.post('/', async (req, res) => {

@@ -58,7 +58,8 @@ export const agents = resource('/agents');
 export const categories = {
   list: () => get('/categories'),
   create: (label, image = '') => post('/categories', { label, image }),
-  remove: id => request('DELETE', `/categories/${id}`),
+  // moveTo: key of the category that receives this category's products (needed when it has any).
+  remove: (id, moveTo) => request('DELETE', `/categories/${id}${moveTo ? `?moveTo=${encodeURIComponent(moveTo)}` : ''}`),
 };
 
 // Photos are shrunk in the browser (~100 KB), then uploaded. Returns { url }.
