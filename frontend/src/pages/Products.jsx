@@ -130,6 +130,11 @@ function ProductForm({ product, products, categories: initialCategories, onCateg
   const menu = products.filter(p => !isCombo(p));
   const chosen = form.comboItems.filter(i => i.productId);
   const worth = comboWorth(chosen, menu);
+  // The struck-out price customers see (MRP, or for a combo the dishes' total) and the saving against it.
+  const price = Number(form.price) || 0;
+  const struck = form.mrp !== '' ? Number(form.mrp) : worth;
+  const save = struck - price;
+  const mrpTooHigh = combo && form.mrp !== '' && worth > 0 && Number(form.mrp) > worth;
   const comboVeg = chosen.every(i => menu.find(p => p._id === i.productId)?.isVeg !== false);
   const comboPrep = Math.max(0, ...chosen.map(i => menu.find(p => p._id === i.productId)?.prepTimeMins || 0));
   const [errors, setErrors] = useState({});
@@ -208,13 +213,14 @@ function ProductForm({ product, products, categories: initialCategories, onCateg
           )}
           {combo && <ComboItems items={form.comboItems} menu={menu} onChange={v => set('comboItems', v)} error={errors.comboItems} />}
           {combo && chosen.length > 0 && (
-            <p className={`preview field--span${Number(form.price) >= worth && form.price !== '' ? ' preview--bad' : ''}`}>
+            <p className={`preview field--span${(price > 0 && save <= 0) || mrpTooHigh ? ' preview--bad' : ''}`}>
               <Layers size={18} />
               <span>
                 These dishes cost <strong>{money(worth)}</strong> separately.
-                {Number(form.price) > 0 && (Number(form.price) < worth
-                  ? <> Customers save <strong>{money(worth - Number(form.price))}</strong> ({Math.round(((worth - Number(form.price)) / worth) * 100)}%).</>
-                  : ' The combo price should be lower than that.')}
+                {price > 0 && (save > 0
+                  ? <> Customers see <s>{money(struck)}</s> and save <strong>{money(save)}</strong> ({Math.round((save / struck) * 100)}%).</>
+                  : <> The combo price should be lower than {money(struck)}.</>)}
+                {mrpTooHigh && <> Your MRP is {money(struck - worth)} more than the dishes cost separately, so the saving looks bigger than it really is.</>}
               </span>
             </p>
           )}
@@ -344,6 +350,8 @@ export default function Products() {
               <tbody>
                 {rows.map(p => {
                   const worth = isCombo(p) ? comboWorth(p.comboItems || [], all) : 0;
+                  // The struck-out price and the saving always use the same number.
+                  const was = p.mrp > p.price ? p.mrp : worth > p.price ? worth : null;
                   const missing = isCombo(p) && (p.comboItems || []).some(i => !byId.get(i.productId)?.isAvailable);
                   return (
                   <tr key={p._id} className={p.isAvailable ? undefined : 'is-muted'}>
@@ -365,8 +373,8 @@ export default function Products() {
                     <td className="nowrap">{categoryLabel[p.category] || p.category}</td>
                     <td className="num">
                       <strong>{money(p.price)}</strong>
-                      {p.mrp > p.price && <div className="cell-sub"><s>{money(p.mrp)}</s></div>}
-                      {isCombo(p) && worth > p.price && <div className="cell-sub saving">Save {money(worth - p.price)}</div>}
+                      {was && <div className="cell-sub"><s>{money(was)}</s></div>}
+                      {was && <div className="cell-sub saving">Save {money(was - p.price)}</div>}
                     </td>
                     <td className="num">{p.prepTimeMins} min</td>
                     <td>
