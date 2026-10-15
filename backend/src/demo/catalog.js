@@ -14,6 +14,7 @@ export const CATEGORIES = [
   { key: 'fastfood', label: 'Burgers & Pizza' },
   { key: 'snacks', label: 'Snacks' },
   { key: 'sweets', label: 'Desserts & Drinks' },
+  { key: 'combos', label: 'Combos' },
 ];
 
 export const ZONES = ['North Zone', 'South Zone', 'East Zone', 'West Zone', 'Central'];
@@ -61,6 +62,28 @@ export const SEED_PRODUCTS = PRODUCT_ROWS.map(
     popularity,
   }),
 );
+
+// Demo combos: bundles of the dishes above sold together at a combo price.
+export function demoCombos(now = Date.now()) {
+  const line = (name, qty = 1) => ({ productId: SEED_PRODUCTS.find(p => p.name === name)._id, name, qty });
+  const at = days => new Date(now - days * DAY).toISOString();
+  return [
+    {
+      _id: seedId('a1', 21), type: 'combo', name: 'Biryani Feast Combo', heading: 'Best value', category: 'combos',
+      comboItems: [line('Chicken Biryani'), line('Samosa', 2), line('Cold Coffee')],
+      price: 399, mrp: 476, isVeg: false, prepTimeMins: 25, isAvailable: true, isBestseller: true,
+      description: 'Chicken biryani, two samosas and a cold coffee.', image: photo('1633945274405-b6c8069047b0'),
+      createdAt: at(5), updatedAt: at(5),
+    },
+    {
+      _id: seedId('a1', 22), type: 'combo', name: 'Burger Meal', heading: '', category: 'combos',
+      comboItems: [line('Classic Burger'), line('French Fries'), line('Cold Coffee')],
+      price: 299, mrp: 377, isVeg: false, prepTimeMins: 15, isAvailable: true, isBestseller: false,
+      description: 'Classic burger with fries and a cold coffee.', image: photo('1568901346375-23c9450c58cd'),
+      createdAt: at(8), updatedAt: at(8),
+    },
+  ];
+}
 
 // Coupons, with their validity window in days relative to today (negative = in the past).
 // `share` only drives how often the simulated order history uses each code.
@@ -126,11 +149,13 @@ export function createSeedData(now = Date.now()) {
   const r = rng(20261015);
   const at = msAgo => new Date(now - msAgo).toISOString();
 
-  const products = SEED_PRODUCTS.map(({ popularity, ...p }, i) => ({
+  const singles = SEED_PRODUCTS.map(({ popularity, ...p }, i) => ({
     ...p,
+    type: 'single',
     createdAt: at((150 + i) * DAY), // the first dish is the newest, so it lists first
     updatedAt: at((20 + i) * DAY),
   }));
+  const products = [...singles, ...demoCombos(now)];
 
   const coupons = SEED_COUPONS.map(({ n, share, from, to, ...c }) => ({
     ...c,

@@ -11,7 +11,7 @@ import { badRequest, conflict, notFound, pick, nowIso } from '../lib/http.js';
 
 export const products = Router();
 
-const PRODUCT_FIELDS = ['name', 'heading', 'category', 'price', 'mrp', 'isVeg', 'description', 'prepTimeMins', 'isAvailable', 'isBestseller', 'image'];
+const PRODUCT_FIELDS = ['type', 'name', 'heading', 'category', 'price', 'mrp', 'isVeg', 'description', 'prepTimeMins', 'isAvailable', 'isBestseller', 'image', 'comboItems'];
 const IMAGE_URL = /^(https?:\/\/|\/uploads\/)/;
 
 const text = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : v);
@@ -24,7 +24,31 @@ function normalizeProduct(body) {
   for (const field of ['price', 'prepTimeMins']) if (field in p) p[field] = Number(p[field]);
   if ('mrp' in p) p.mrp = p.mrp === null || p.mrp === '' ? null : Number(p.mrp);
   for (const field of ['isVeg', 'isAvailable', 'isBestseller']) if (field in p) p[field] = Boolean(p[field]);
+  if ('type' in p) p.type = p.type === 'combo' ? 'combo' : 'single';
+  if ('comboItems' in p) {
+    // One line per dish (repeats are merged), at most 10 lines.
+    const lines = new Map();
+    for (const item of Array.isArray(p.comboItems) ? p.comboItems.slice(0, 10) : []) {
+      const id = String(item?.productId || '');
+      if (id) lines.set(id, (lines.get(id) || 0) + Math.round(Number(item.qty) || 0));
+    }
+    p.comboItems = [...lines].map(([productId, qty]) => ({ productId, qty }));
+  }
   return p;
+}
+
+// Fills in each combo item's name from the menu and works out whether the combo is veg.
+async function resolveCombo(items) {
+  const resolved = [];
+  let veg = true;
+  for (const { productId, qty } of items) {
+    const product = await store.findById('products', productId);
+    if (!product) throw badRequest('One of the combo items is no longer on the menu.');
+    if (product.type === 'combo') throw badRequest('A combo can’t contain another combo.');
+    resolved.push({ productId: product._id, name: product.name, qty });
+    veg = veg && product.isVeg;
+  }
+  return { comboItems: resolved, isVeg: veg };
 }
 
 async function validateProduct(p) {
@@ -34,6 +58,11 @@ async function validateProduct(p) {
   if (p.mrp != null && !(p.mrp >= p.price)) throw badRequest('MRP can’t be lower than the price.');
   if (!(Number.isInteger(p.prepTimeMins) && p.prepTimeMins > 0 && p.prepTimeMins <= 240)) throw badRequest('Prep time must be 1–240 minutes.');
   if (p.image && !IMAGE_URL.test(p.image)) throw badRequest('Use an https:// image link or upload a photo.');
+  if (p.type === 'combo') {
+    const items = p.comboItems || [];
+    if (!items.length || items.some(i => !(i.qty >= 1 && i.qty <= 10))) throw badRequest('Add the dishes in this combo, each 1–10 times.');
+    if (items.reduce((s, i) => s + i.qty, 0) < 2) throw badRequest('A combo needs at least 2 items.');
+  }
 }
 
 products.get('/', async (req, res) => {
@@ -41,7 +70,9 @@ products.get('/', async (req, res) => {
 });
 
 products.post('/', async (req, res) => {
-  const doc = { heading: '', description: '', image: '', mrp: null, isVeg: true, isAvailable: true, isBestseller: false, ...normalizeProduct(req.body) };
+  const doc = { type: 'single', heading: '', description: '', image: '', mrp: null, isVeg: true, isAvailable: true, isBestseller: false, ...normalizeProduct(req.body) };
+  if (doc.type === 'combo') Object.assign(doc, await resolveCombo(doc.comboItems || []));
+  else delete doc.comboItems;
   await validateProduct(doc);
   const now = nowIso();
   res.status(201).json(await store.insert('products', { ...doc, createdAt: now, updatedAt: now }));
@@ -51,11 +82,26 @@ products.patch('/:id', async (req, res) => {
   const current = await store.findById('products', req.params.id);
   if (!current) throw notFound();
   const changes = normalizeProduct(req.body);
+  const next = { ...current, ...changes };
+  if (next.type === 'combo' && ('comboItems' in changes || 'type' in changes)) Object.assign(changes, await resolveCombo(next.comboItems || []));
   await validateProduct({ ...current, ...changes });
-  res.json(await store.update('products', current._id, { ...changes, updatedAt: nowIso() }));
+  const saved = await store.update('products', current._id, { ...changes, updatedAt: nowIso() });
+
+  // Keep combos that include this dish in step with its name.
+  if (saved.type !== 'combo' && changes.name && changes.name !== current.name) {
+    for (const combo of await store.find('products', { type: 'combo' })) {
+      if (!combo.comboItems?.some(i => i.productId === saved._id)) continue;
+      await store.update('products', combo._id, { comboItems: combo.comboItems.map(i => (i.productId === saved._id ? { ...i, name: saved.name } : i)) });
+    }
+  }
+  res.json(saved);
 });
 
 products.delete('/:id', async (req, res) => {
+  const inCombos = (await store.find('products', { type: 'combo' }))
+    .filter(c => c.comboItems?.some(i => i.productId === req.params.id))
+    .map(c => c.name);
+  if (inCombos.length) throw conflict(`It’s part of ${inCombos.join(', ')}. Remove it from ${inCombos.length > 1 ? 'those combos' : 'that combo'} first.`);
   if (!(await store.remove('products', req.params.id))) throw notFound();
   res.status(204).end();
 });

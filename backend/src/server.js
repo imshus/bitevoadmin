@@ -2,7 +2,7 @@
 import { config } from './config.js';
 import { connectStore, store } from './db/index.js';
 import { createApp } from './app.js';
-import { seedIfEmpty } from './demo/seed.js';
+import { seedIfEmpty, addDemoCombos } from './demo/seed.js';
 import { startSimulator } from './demo/simulator.js';
 
 try {
@@ -17,6 +17,8 @@ let stopSimulator = () => {};
 if (config.demoMode) {
   const seeded = await seedIfEmpty();
   if (seeded) console.log(`Empty database, so loaded demo data (${seeded.orders} orders, ${seeded.products} products).`);
+  const combos = await addDemoCombos();
+  if (combos) console.log(`Added ${combos} demo combos.`);
   stopSimulator = startSimulator();
   console.log('Demo mode: new demo orders will keep arriving. Set DEMO_MODE=false for real use.');
 }

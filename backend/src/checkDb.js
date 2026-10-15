@@ -1,5 +1,5 @@
 // Read-only look at the MongoDB cluster: which databases and collections exist, and how big they are.
-// Run with: npm run check-db -w backend
+// Run with: npm run check-db
 import { MongoClient } from 'mongodb';
 import { config } from './config.js';
 

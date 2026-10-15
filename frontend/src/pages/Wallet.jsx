@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { wallets as api, customers as customerApi } from '../api/index.js';
+import { wallets as api, customers as customerApi, settings as settingsApi } from '../api/index.js';
 import { useApi, usePageTitle } from '../lib/useApi.js';
 import { money, num, timeAgo, dateTime } from '../lib/format.js';
 import { WALLET_TXN } from '../lib/status.js';
@@ -8,7 +8,6 @@ import { PageHeader, Badge, Segmented, SearchInput, Modal, Field, Loading, Error
 import { Wallet as WalletIcon, Gift, Refresh, Bag, Plus, X } from '../components/Icons.jsx';
 
 const PAGE_SIZE = 20;
-const REASONS = ['Goodwill credit', 'Compensation for an order issue', 'Referral bonus', 'Promotional credit', 'Correction of a wrong credit'];
 
 const TYPE_FILTERS = [
   { value: 'all', label: 'All', match: () => true },
@@ -51,12 +50,12 @@ function CustomerPicker({ onPick }) {
   );
 }
 
-function AdjustForm({ customer: fixed, onDone }) {
+function AdjustForm({ customer: fixed, reasons, onDone }) {
   const toast = useToast();
   const [customer, setCustomer] = useState(fixed || null);
   const [mode, setMode] = useState('add');
   const [amount, setAmount] = useState('');
-  const [note, setNote] = useState(REASONS[0]);
+  const [note, setNote] = useState(reasons[0] || '');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -103,7 +102,7 @@ function AdjustForm({ customer: fixed, onDone }) {
           </Field>
           <Field label="Reason" hint="Saved with the transaction.">
             <input className="input" list="wallet-reasons" value={note} onChange={e => setNote(e.target.value)} maxLength={80} />
-            <datalist id="wallet-reasons">{REASONS.map(r => <option key={r} value={r} />)}</datalist>
+            <datalist id="wallet-reasons">{reasons.map(r => <option key={r} value={r} />)}</datalist>
           </Field>
         </div>
         {customer && value > 0 && (
@@ -127,6 +126,7 @@ function AdjustForm({ customer: fixed, onDone }) {
 export default function Wallet() {
   usePageTitle('Wallet');
   const { data, loading, refreshing, error, reload } = useApi(() => api.overview());
+  const { data: settings } = useApi(() => settingsApi.get());
   const [tab, setTab] = useState('wallets');
   const [query, setQuery] = useState('');
   const [onlyFunded, setOnlyFunded] = useState('funded');
@@ -275,7 +275,7 @@ export default function Wallet() {
       <p className="footnote">Cashback is added after an order is delivered. Refunds land here when a cancelled order is refunded to the wallet.</p>
 
       <Modal open={Boolean(adjusting)} onClose={() => setAdjusting(null)} title={adjusting?.customerId ? `Adjust ${adjusting.customerName}’s wallet` : 'Add or deduct money'}>
-        {adjusting && <AdjustForm customer={adjusting.customerId ? adjusting : null} onDone={saved => { setAdjusting(null); if (saved) reload(); }} />}
+        {adjusting && <AdjustForm customer={adjusting.customerId ? adjusting : null} reasons={settings?.walletReasons || []} onDone={saved => { setAdjusting(null); if (saved) reload(); }} />}
       </Modal>
     </>
   );

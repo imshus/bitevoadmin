@@ -2,11 +2,11 @@ import { Router } from 'express';
 import { store } from '../db/index.js';
 import { badRequest, notFound, nowIso, startOfToday, DAY } from '../lib/http.js';
 import { LIVE_STATUSES, NEXT_STATUS } from '../lib/rules.js';
+import { getSettings } from '../settings.js';
 
 export const router = Router();
 
 const MIN = 60000;
-const CANCEL_REASONS = ['Customer asked to cancel', 'Item not available', 'Kitchen too busy', 'Address outside delivery area', 'No delivery agent available', 'Suspected fraud'];
 
 async function findOrder(id) {
   const order = await store.findById('orders', id);
@@ -68,7 +68,7 @@ router.post('/:id/cancel', async (req, res) => {
   const order = await findOrder(req.params.id);
   if (!LIVE_STATUSES.includes(order.status)) throw badRequest('Delivered or cancelled orders can’t be cancelled.');
   const reason = String(req.body?.reason || '');
-  if (!CANCEL_REASONS.includes(reason)) throw badRequest('Pick a reason for cancelling.');
+  if (!(await getSettings()).cancelReasons.includes(reason)) throw badRequest('Pick a reason for cancelling.');
   const refundTo = ['wallet', 'source', 'none'].includes(req.body?.refundTo) ? req.body.refundTo : 'none';
 
   const cash = order.paymentMethod === 'Cash on delivery';

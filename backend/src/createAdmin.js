@@ -1,5 +1,5 @@
 // Creates (or resets the password of) an admin account:
-//   npm run create-admin -w backend -- --email you@bitevo.in --name "Your Name" --role "Super admin"
+//   npm run create-admin -- --email you@bitevo.in --name "Your Name" --role "Super admin"
 // The password is asked for in the terminal and stored only as a bcrypt hash.
 import readline from 'node:readline';
 import bcrypt from 'bcryptjs';
@@ -27,7 +27,7 @@ const email = (arg('email') || '').trim().toLowerCase();
 const name = (arg('name') || '').trim();
 const role = (arg('role') || 'Super admin').trim();
 if (!/^\S+@\S+\.\S+$/.test(email) || !name) {
-  console.log('Usage: npm run create-admin -w backend -- --email you@bitevo.in --name "Your Name" [--role "Super admin"]');
+  console.log('Usage: npm run create-admin -- --email you@bitevo.in --name "Your Name" [--role "Super admin"]');
   process.exit(1);
 }
 

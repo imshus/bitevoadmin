@@ -1,4 +1,4 @@
-// All backend settings come from environment variables (.env in backend/ or the project root).
+// All backend settings come from environment variables, usually backend/.env (see .env.example).
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
@@ -6,7 +6,6 @@ import dotenv from 'dotenv';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const backendDir = path.resolve(here, '..');
 dotenv.config({ path: path.join(backendDir, '.env'), quiet: true });
-dotenv.config({ path: path.join(backendDir, '..', '.env'), quiet: true }); // project-root .env (doesn't override)
 
 // Accepts MONGODB_URI, or the MONGO_DB_URL / MONGO_DB_USER / MONGO_DB_PASSWORD trio.
 function mongoUri() {

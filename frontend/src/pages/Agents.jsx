@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { agents as api, ZONES, VEHICLES } from '../api/index.js';
+import { agents as api, settings as settingsApi } from '../api/index.js';
 import { useApi, usePatch, usePageTitle } from '../lib/useApi.js';
 import { mins, pct, dateOnly } from '../lib/format.js';
 import { AGENT_STATUS, KYC_STATUS } from '../lib/status.js';
@@ -7,7 +7,7 @@ import { useToast } from '../components/Toast.jsx';
 import { PageHeader, Badge, Switch, Field, Segmented, SearchInput, Modal, useConfirm, Loading, ErrorState, EmptyState, StatTile, Avatar } from '../components/ui.jsx';
 import { Plus, Pencil, Trash, Bike, Star, Activity, Moon, Shield } from '../components/Icons.jsx';
 
-const EMPTY = { name: '', phone: '+91 ', email: '', zone: ZONES[0], vehicleType: VEHICLES[0], vehicleNumber: '', kycStatus: 'pending', status: 'offline', isActive: true };
+const EMPTY = { name: '', phone: '+91 ', email: '', zone: '', vehicleType: '', vehicleNumber: '', kycStatus: 'pending', status: 'offline', isActive: true };
 
 function validate(f) {
   const e = {};
@@ -18,9 +18,9 @@ function validate(f) {
   return e;
 }
 
-function AgentForm({ agent, onDone }) {
+function AgentForm({ agent, zones, vehicleTypes, onDone }) {
   const toast = useToast();
-  const [form, setForm] = useState(() => ({ ...EMPTY, ...agent }));
+  const [form, setForm] = useState(() => ({ ...EMPTY, zone: zones[0], vehicleType: vehicleTypes[0], ...agent }));
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -71,12 +71,12 @@ function AgentForm({ agent, onDone }) {
           </Field>
           <Field label="Delivery zone">
             <select className="input" value={form.zone} onChange={e => set('zone', e.target.value)}>
-              {ZONES.map(z => <option key={z}>{z}</option>)}
+              {zones.map(z => <option key={z}>{z}</option>)}
             </select>
           </Field>
           <Field label="Vehicle">
             <select className="input" value={form.vehicleType} onChange={e => set('vehicleType', e.target.value)}>
-              {VEHICLES.map(v => <option key={v}>{v}</option>)}
+              {vehicleTypes.map(v => <option key={v}>{v}</option>)}
             </select>
           </Field>
           {form.vehicleType !== 'Bicycle' && (
@@ -105,6 +105,8 @@ export default function Agents() {
   usePageTitle('Delivery agents');
   const toast = useToast();
   const { data, loading, refreshing, error, reload } = useApi(() => api.list());
+  const { data: settings } = useApi(() => settingsApi.get());
+  const zones = settings?.zones || [];
   const [view, patch] = usePatch(reload);
   const [confirm, confirmDialog] = useConfirm();
   const [query, setQuery] = useState('');
@@ -171,7 +173,7 @@ export default function Agents() {
         <SearchInput value={query} onChange={setQuery} placeholder="Search name, phone or vehicle" />
         <select className="input input--auto" value={zone} onChange={e => setZone(e.target.value)} aria-label="Zone">
           <option value="all">All zones</option>
-          {ZONES.map(z => <option key={z}>{z}</option>)}
+          {zones.map(z => <option key={z}>{z}</option>)}
         </select>
         <Segmented label="Status" value={status} onChange={setStatus}
           options={STATUS_FILTERS.map(f => ({ value: f.value, label: f.label, count: scoped.filter(f.match).length }))} />
@@ -252,7 +254,7 @@ export default function Agents() {
       <p className="footnote">Online / on-delivery status comes from the delivery app. Deliveries, average delivery time and rating cover the last 30 days.</p>
 
       <Modal open={Boolean(editing)} onClose={() => setEditing(null)} title={editing?._id ? `Edit ${editing.name}` : 'Add delivery agent'} wide>
-        {editing && <AgentForm agent={editing} onDone={saved => { setEditing(null); if (saved) reload(); }} />}
+        {editing && settings && <AgentForm agent={editing} zones={settings.zones} vehicleTypes={settings.vehicleTypes} onDone={saved => { setEditing(null); if (saved) reload(); }} />}
       </Modal>
       {confirmDialog}
     </>

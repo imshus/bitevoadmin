@@ -16,6 +16,7 @@ import { wallets, customers } from './routes/wallets.js';
 import { sessions, loginEvents } from './routes/activity.js';
 import { analytics, dashboard } from './routes/reports.js';
 import { resetDemoData } from './demo/seed.js';
+import { router as settingsRoutes } from './settings.js';
 
 export function createApp() {
   const app = express();
@@ -46,6 +47,7 @@ export function createApp() {
   app.use('/api/login-events', loginEvents);
   app.use('/api/analytics', analytics);
   app.use('/api/dashboard', dashboard);
+  app.use('/api/settings', settingsRoutes);
 
   // Demo only: wipe the admin panel's collections and load fresh demo data.
   app.post('/api/demo/reset', async (req, res) => {

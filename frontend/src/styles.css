@@ -629,6 +629,14 @@ textarea.input { height: auto; padding: 11px 14px; resize: vertical; }
 .picked { padding: 10px 12px; border: 1.5px solid var(--border-strong); border-radius: 14px; }
 .preview--bad { background: var(--critical-soft); }
 
+/* ---------- Combos ---------- */
+.combo-lines { display: flex; flex-direction: column; gap: 8px; }
+.combo-line { display: grid; grid-template-columns: minmax(0, 1fr) 84px 38px; gap: 8px; align-items: center; }
+.combo-add { align-self: flex-start; margin-top: 2px; }
+.readonly { display: inline-flex; align-items: center; gap: 8px; height: 44px; font-weight: 600; }
+.form-grid > .preview { margin-top: 0; }
+.saving { color: var(--good-text); font-weight: 600; }
+
 /* ---------- Toasts ---------- */
 .toasts { position: fixed; right: 20px; bottom: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; max-width: calc(100vw - 40px); }
 .toast {

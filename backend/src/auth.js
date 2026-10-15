@@ -24,6 +24,7 @@ export const publicAdmin = (admin, session) => ({
   role: admin.role,
   sessionId: session._id,
   demoMode: config.demoMode,
+  dataStore: store.label,
 });
 
 // Guards every /api route except sign-in.

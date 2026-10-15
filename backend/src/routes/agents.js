@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { store } from '../db/index.js';
 import { agentStats } from '../analytics.js';
 import { badRequest, conflict, notFound, pick, nowIso, DAY } from '../lib/http.js';
-import { ZONES, VEHICLES } from '../lib/rules.js';
+import { getSettings } from '../settings.js';
 
 export const router = Router();
 
@@ -21,8 +21,9 @@ async function validate(a, id) {
   if (!a.name) throw badRequest('Name is required.');
   if (digits(a.phone).length !== 10) throw badRequest('Enter a valid 10-digit phone number.');
   if (a.email && !/^\S+@\S+\.\S+$/.test(a.email)) throw badRequest('Enter a valid email, or leave it empty.');
-  if (!ZONES.includes(a.zone)) throw badRequest('Pick a delivery zone.');
-  if (!VEHICLES.includes(a.vehicleType)) throw badRequest('Pick a vehicle type.');
+  const { zones, vehicleTypes } = await getSettings();
+  if (!zones.includes(a.zone)) throw badRequest('Pick a delivery zone.');
+  if (!vehicleTypes.includes(a.vehicleType)) throw badRequest('Pick a vehicle type.');
   if (!['verified', 'pending', 'rejected'].includes(a.kycStatus)) throw badRequest('Pick an ID check status.');
   if (!['online', 'busy', 'offline'].includes(a.status)) throw badRequest('Unknown agent status.');
   const all = await store.find('agents', {}, { projection: { phone: 1 } });

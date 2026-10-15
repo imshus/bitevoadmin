@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { ADMINS, createSeedData } from './catalog.js';
 import { generateOrders } from './orderHistory.js';
 import { objectId } from '../lib/ids.js';
+import { DEFAULT_SETTINGS } from '../settings.js';
 
 const DAY = 86400000;
 const MIN = 60000;
@@ -46,7 +47,7 @@ export async function buildDemoData(now = Date.now()) {
   })));
 
   return {
-    meta: [{ _id: 'demo', seededAt: new Date(now).toISOString() }],
+    meta: [{ _id: 'demo', seededAt: new Date(now).toISOString(), combosAdded: true }],
     admins,
     categories: base.categories,
     products: base.products,
@@ -57,5 +58,6 @@ export async function buildDemoData(now = Date.now()) {
     walletTxns,
     sessions: base.sessions,
     loginEvents: base.loginEvents,
+    settings: [{ _id: 'app', ...DEFAULT_SETTINGS, updatedAt: new Date(now).toISOString() }],
   };
 }

@@ -1,0 +1,11 @@
+node_modules/
+*.log
+
+# Secrets: the MongoDB connection lives here. Never commit it.
+.env
+.env.*
+!.env.example
+
+# Runtime files
+data/
+uploads/

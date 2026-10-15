@@ -9,7 +9,7 @@ export let store = null;
 // The collections the admin panel owns (used when seeding / resetting demo data).
 export const COLLECTIONS = [
   'meta', 'admins', 'categories', 'products', 'coupons', 'agents', 'customers',
-  'orders', 'walletTxns', 'sessions', 'loginEvents',
+  'orders', 'walletTxns', 'sessions', 'loginEvents', 'settings',
 ];
 
 const INDEXES = [

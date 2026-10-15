@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { orders as api, agents as agentApi } from '../api/index.js';
+import { orders as api, agents as agentApi, settings as settingsApi } from '../api/index.js';
 import { useApi, usePageTitle } from '../lib/useApi.js';
 import { money, num, timeAgo, dateTime } from '../lib/format.js';
 import { ORDER_STATUS, AGENT_STATUS } from '../lib/status.js';
@@ -18,7 +18,6 @@ const NEXT_ACTION = {
   out_for_delivery: 'Mark delivered',
 };
 
-const CANCEL_REASONS = ['Customer asked to cancel', 'Item not available', 'Kitchen too busy', 'Address outside delivery area', 'No delivery agent available', 'Suspected fraud'];
 
 const RANGES = [
   { value: 1, label: 'Today' },
@@ -60,9 +59,9 @@ function Timeline({ order }) {
   );
 }
 
-function CancelPanel({ order, onCancel, onBack, busy }) {
+function CancelPanel({ order, reasons, onCancel, onBack, busy }) {
   const prepaid = order.paymentMethod !== 'Cash on delivery';
-  const [reason, setReason] = useState(CANCEL_REASONS[0]);
+  const [reason, setReason] = useState(reasons[0]);
   const [refundTo, setRefundTo] = useState(prepaid ? 'wallet' : order.walletUsed ? 'wallet' : 'none');
   const paid = prepaid ? order.total : order.walletUsed;
 
@@ -71,7 +70,7 @@ function CancelPanel({ order, onCancel, onBack, busy }) {
       <h3>Cancel order {order.orderNo}</h3>
       <Field label="Reason">
         <select className="input" value={reason} onChange={e => setReason(e.target.value)}>
-          {CANCEL_REASONS.map(r => <option key={r}>{r}</option>)}
+          {reasons.map(r => <option key={r}>{r}</option>)}
         </select>
       </Field>
       {paid > 0 ? (
@@ -104,6 +103,7 @@ function OrderDetails({ id, onChanged }) {
   const toast = useToast();
   const { data: order, loading, error, reload } = useApi(() => api.get(id), [id]);
   const { data: agentList } = useApi(() => agentApi.list());
+  const { data: settings } = useApi(() => settingsApi.get());
   const [busy, setBusy] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [agentId, setAgentId] = useState('');
@@ -225,8 +225,8 @@ function OrderDetails({ id, onChanged }) {
           </section>
         )}
 
-        {cancelling && (
-          <CancelPanel order={order} busy={busy} onBack={() => setCancelling(false)}
+        {cancelling && settings && (
+          <CancelPanel order={order} reasons={settings.cancelReasons} busy={busy} onBack={() => setCancelling(false)}
             onCancel={(reason, refundTo) => run(() => api.cancel(order._id, { reason, refundTo }), `Order ${order.orderNo} cancelled`)} />
         )}
       </div>

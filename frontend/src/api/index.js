@@ -5,9 +5,6 @@ import { shrinkImage } from '../lib/image.js';
 
 const BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
-export const ZONES = ['North Zone', 'South Zone', 'East Zone', 'West Zone', 'Central'];
-export const VEHICLES = ['Bike', 'Scooter', 'E-bike', 'Bicycle'];
-
 export class ApiError extends Error {
   constructor(message, status = 0) {
     super(message);
@@ -109,6 +106,12 @@ export const analytics = {
   get: days => get(`/analytics?days=${days}`),
 };
 
+// Lists stored in MongoDB: zones, vehicleTypes, cancelReasons, walletReasons.
+export const settings = {
+  get: () => get('/settings'),
+  update: changes => request('PATCH', '/settings', changes),
+};
+
 export const dashboard = {
   summary: () => get('/dashboard'),
 };
@@ -128,4 +131,3 @@ export const auth = {
   logout: () => post('/auth/logout', undefined, { quiet401: true }),
 };
 
-export const resetDemoData = () => post('/demo/reset');

@@ -74,7 +74,6 @@ export default function Login() {
         <button className="btn btn--primary btn--block" disabled={busy || !email || !password}>
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
-        <p className="login__note">Demo accounts are listed in README.md.</p>
       </form>
     </div>
   );

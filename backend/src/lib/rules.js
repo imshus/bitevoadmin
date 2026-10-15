@@ -3,9 +3,6 @@
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
 export const money = n => inr.format(Math.round(n || 0));
 
-export const ZONES = ['North Zone', 'South Zone', 'East Zone', 'West Zone', 'Central'];
-export const VEHICLES = ['Bike', 'Scooter', 'E-bike', 'Bicycle'];
-
 // Order flow: placed (new) → preparing → out_for_delivery → delivered; or cancelled.
 export const LIVE_STATUSES = ['placed', 'preparing', 'out_for_delivery'];
 export const NEXT_STATUS = { placed: 'preparing', preparing: 'out_for_delivery', out_for_delivery: 'delivered' };

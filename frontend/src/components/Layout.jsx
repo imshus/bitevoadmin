@@ -1,9 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
-import { resetDemoData } from '../api/index.js';
-import { useConfirm, Avatar, Logo } from './ui.jsx';
-import { Dashboard, Box, Ticket, Bike, LogIn, LogOut, Chart, Menu, X, Sun, Moon, Refresh, ChevronDown, Bag, Wallet } from './Icons.jsx';
+import { Avatar, Logo } from './ui.jsx';
+import { Dashboard, Box, Ticket, Bike, LogIn, LogOut, Chart, Menu, X, Sun, Moon, ChevronDown, Bag, Wallet } from './Icons.jsx';
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: Dashboard, end: true },
@@ -69,7 +68,6 @@ function useTheme() {
 function UserMenu() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
-  const [confirm, confirmDialog] = useConfirm();
   const ref = useRef(null);
 
   useEffect(() => {
@@ -84,24 +82,6 @@ function UserMenu() {
     };
   }, [open]);
 
-  const reset = async () => {
-    setOpen(false);
-    const ok = await confirm({
-      title: 'Reset demo data?',
-      message: 'All products, coupons, agents and sessions go back to the original dummy data, and you will be signed out.',
-      confirmLabel: 'Reset data',
-      danger: true,
-    });
-    if (ok) {
-      try {
-        await resetDemoData();
-        window.location.assign('/login');
-      } catch (err) {
-        window.alert(err.message);
-      }
-    }
-  };
-
   return (
     <div className="user-menu" ref={ref}>
       <button className="user-menu__btn" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-haspopup="menu" aria-label={`Account menu for ${user.name}`}>
@@ -115,11 +95,9 @@ function UserMenu() {
       {open && (
         <div className="user-menu__pop" role="menu">
           <div className="user-menu__email">{user.email}</div>
-          {user.demoMode && <button role="menuitem" onClick={reset}><Refresh size={18} />Reset demo data</button>}
           <button role="menuitem" onClick={logout}><LogOut size={18} />Sign out</button>
         </div>
       )}
-      {confirmDialog}
     </div>
   );
 }
@@ -152,12 +130,6 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
-        {user.demoMode && (
-          <div className="sidebar__foot">
-            <span className="pill">Demo mode</span>
-            <p>Showing demo data, and new demo orders keep arriving. Turn off with DEMO_MODE=false on the server.</p>
-          </div>
-        )}
       </aside>
       <div className="scrim" onClick={() => setNavOpen(false)} aria-hidden="true" />
 
