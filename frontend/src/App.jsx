@@ -1,0 +1,37 @@
+import { Routes, Route } from 'react-router-dom';
+import { AuthProvider, RequireAuth } from './auth.jsx';
+import { ToastProvider } from './components/Toast.jsx';
+import Layout from './components/Layout.jsx';
+import Login from './pages/Login.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import Products from './pages/Products.jsx';
+import Coupons from './pages/Coupons.jsx';
+import Agents from './pages/Agents.jsx';
+import LoginStatus from './pages/LoginStatus.jsx';
+import Analytics from './pages/Analytics.jsx';
+import Orders from './pages/Orders.jsx';
+import Wallet from './pages/Wallet.jsx';
+import NotFound from './pages/NotFound.jsx';
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <ToastProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route element={<RequireAuth><Layout /></RequireAuth>}>
+            <Route index element={<Dashboard />} />
+            <Route path="orders" element={<Orders />} />
+            <Route path="products" element={<Products />} />
+            <Route path="coupons" element={<Coupons />} />
+            <Route path="wallet" element={<Wallet />} />
+            <Route path="agents" element={<Agents />} />
+            <Route path="logins" element={<LoginStatus />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </ToastProvider>
+    </AuthProvider>
+  );
+}

@@ -4,3 +4,7 @@ dist/
 .env
 .env.local
 .claude/
+
+# Backend runtime files
+backend/data/
+backend/uploads/

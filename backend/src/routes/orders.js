@@ -1,0 +1,83 @@
+import { Router } from 'express';
+import { store } from '../db/index.js';
+import { badRequest, notFound, nowIso, startOfToday, DAY } from '../lib/http.js';
+import { LIVE_STATUSES, NEXT_STATUS } from '../lib/rules.js';
+
+export const router = Router();
+
+const MIN = 60000;
+const CANCEL_REASONS = ['Customer asked to cancel', 'Item not available', 'Kitchen too busy', 'Address outside delivery area', 'No delivery agent available', 'Suspected fraud'];
+
+async function findOrder(id) {
+  const order = await store.findById('orders', id);
+  if (!order) throw notFound('This order no longer exists.');
+  return order;
+}
+
+// Applies changes and records who did what in the order's history.
+const saveChange = (order, changes, event, admin) =>
+  store.update('orders', order._id, { ...changes, updatedAt: nowIso() }, { push: { history: { ...event, at: nowIso(), by: admin.name } } });
+
+const walletTxn = (order, type, amount, note) => store.insert('walletTxns', {
+  customerId: order.customerId, customerName: order.customerName, customerPhone: order.customerPhone,
+  orderId: order._id, type, amount, note, at: nowIso(),
+});
+
+// Orders placed in the last `days` days (1 = today), newest first.
+router.get('/', async (req, res) => {
+  const days = Math.min(Math.max(Number(req.query.days) || 1, 1), 90);
+  const since = new Date(startOfToday() - (days - 1) * DAY).toISOString();
+  res.json(await store.find('orders', { placedAt: { $gte: since } }, { sort: { placedAt: -1 } }));
+});
+
+router.get('/:id', async (req, res) => {
+  res.json(await findOrder(req.params.id));
+});
+
+// Moves an order to its next step: accept → out for delivery → delivered.
+router.post('/:id/advance', async (req, res) => {
+  const order = await findOrder(req.params.id);
+  const status = NEXT_STATUS[order.status];
+  if (!status) throw badRequest('This order is already finished.');
+  if (status === 'out_for_delivery' && !order.agentId) throw badRequest('Assign a delivery agent before sending it out.');
+
+  const changes = { status };
+  if (status === 'out_for_delivery') {
+    changes.dispatchedAt = nowIso();
+    changes.dueAt = new Date(Date.now() + (12 + Math.round(Math.random() * 13)) * MIN).toISOString(); // for the demo simulator
+  }
+  if (status === 'delivered') {
+    changes.deliveredAt = nowIso();
+    changes.deliveryMins = Math.max(1, Math.round((Date.now() - Date.parse(order.placedAt)) / MIN));
+  }
+  const saved = await saveChange(order, changes, { status }, req.admin);
+  if (status === 'delivered' && order.cashback > 0) await walletTxn(order, 'cashback', order.cashback, `${order.couponCode} on order ${order.orderNo}`);
+  res.json(saved);
+});
+
+router.post('/:id/assign', async (req, res) => {
+  const order = await findOrder(req.params.id);
+  if (!LIVE_STATUSES.includes(order.status)) throw badRequest('Only live orders can be reassigned.');
+  const agent = await store.findById('agents', String(req.body?.agentId || ''));
+  if (!agent || !agent.isActive || agent.kycStatus !== 'verified') throw badRequest('Pick an active, verified agent.');
+  res.json(await saveChange(order, { agentId: agent._id, agentName: agent.name, zone: agent.zone }, { status: 'assigned', note: agent.name }, req.admin));
+});
+
+// refundTo: 'wallet' | 'source' | 'none'. Cash orders can only refund what was paid from the wallet.
+router.post('/:id/cancel', async (req, res) => {
+  const order = await findOrder(req.params.id);
+  if (!LIVE_STATUSES.includes(order.status)) throw badRequest('Delivered or cancelled orders can’t be cancelled.');
+  const reason = String(req.body?.reason || '');
+  if (!CANCEL_REASONS.includes(reason)) throw badRequest('Pick a reason for cancelling.');
+  const refundTo = ['wallet', 'source', 'none'].includes(req.body?.refundTo) ? req.body.refundTo : 'none';
+
+  const cash = order.paymentMethod === 'Cash on delivery';
+  const paid = cash ? order.walletUsed || 0 : order.total;
+  const to = cash || order.paymentMethod === 'Wallet' ? 'wallet' : refundTo;
+  const refund = paid > 0 && refundTo !== 'none' ? { amount: paid, to } : null;
+
+  const changes = { status: 'cancelled', cancelReason: reason, cancelledAt: nowIso(), refund, deliveryMins: null, rating: null };
+  const saved = await saveChange(order, changes, { status: 'cancelled', note: reason }, req.admin);
+  if (refund?.to === 'wallet') await walletTxn(order, 'refund', refund.amount, `Cancelled order ${order.orderNo}`);
+  res.json(saved);
+});
