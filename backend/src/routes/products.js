@@ -110,8 +110,27 @@ products.delete('/:id', async (req, res) => {
 
 export const categories = Router();
 
+// Each category comes with `productCount`, the number of menu items in it.
 categories.get('/', async (req, res) => {
-  res.json(await store.find('categories', {}, { sort: { order: 1 } }));
+  const [list, items] = await Promise.all([
+    store.find('categories', {}, { sort: { order: 1 } }),
+    store.find('products', {}, { projection: { category: 1 } }),
+  ]);
+  const counts = {};
+  for (const p of items) counts[p.category] = (counts[p.category] || 0) + 1;
+  res.json(list.map(c => ({ ...c, productCount: counts[c.key] || 0 })));
+});
+
+// Only empty categories can be deleted, so no product is left without one.
+categories.delete('/:id', async (req, res) => {
+  const category = await store.findById('categories', req.params.id);
+  if (!category) throw notFound('This category no longer exists.');
+  const used = await store.count('products', { category: category.key });
+  if (used) {
+    throw conflict(`“${category.label}” still has ${used} product${used > 1 ? 's' : ''}. Move ${used > 1 ? 'them' : 'it'} to another category or delete ${used > 1 ? 'them' : 'it'} first.`);
+  }
+  await store.remove('categories', category._id);
+  res.status(204).end();
 });
 
 categories.post('/', async (req, res) => {

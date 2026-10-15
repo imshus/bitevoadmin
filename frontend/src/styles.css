@@ -636,6 +636,14 @@ textarea.input { height: auto; padding: 11px 14px; resize: vertical; }
 .readonly { display: inline-flex; align-items: center; gap: 8px; height: 44px; font-weight: 600; }
 .form-grid > .preview { margin-top: 0; }
 .saving { color: var(--good-text); font-weight: 600; }
+.category-note { font-size: 13px; margin-bottom: 12px; }
+.category-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 14px; }
+.category-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; }
+.category-list li + li { border-top: 1px solid var(--border); }
+.category-list__name { font-weight: 600; }
+.category-list.is-empty { display: none; }
+.category-empty { padding: 16px; border: 1px dashed var(--border-strong); border-radius: 14px; color: var(--muted); text-align: center; }
+.icon-btn:disabled { opacity: .35; cursor: not-allowed; background: none; }
 
 /* ---------- Toasts ---------- */
 .toasts { position: fixed; right: 20px; bottom: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; max-width: calc(100vw - 40px); }

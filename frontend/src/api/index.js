@@ -58,6 +58,7 @@ export const agents = resource('/agents');
 export const categories = {
   list: () => get('/categories'),
   create: label => post('/categories', { label }),
+  remove: id => request('DELETE', `/categories/${id}`),
 };
 
 // Photos are shrunk in the browser (~100 KB), then uploaded. Returns { url }.

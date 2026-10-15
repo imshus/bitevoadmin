@@ -70,8 +70,11 @@ export function computeAnalytics(orders, days, now, categories) {
       products.set(it.productId, p);
     }
   }
-  const byCategory = categories.map(c => ({ key: c.key, label: c.label, revenue: categoryRevenue.get(c.key) || 0 }))
-    .sort((a, b) => b.revenue - a.revenue);
+  const byCategory = categories.map(c => ({ key: c.key, label: c.label, revenue: categoryRevenue.get(c.key) || 0 }));
+  const known = new Set(categories.map(c => c.key));
+  const other = [...categoryRevenue].filter(([key]) => !known.has(key)).reduce((s, [, revenue]) => s + revenue, 0);
+  if (other > 0) byCategory.push({ key: 'other', label: 'Other (deleted categories)', revenue: other });
+  byCategory.sort((a, b) => b.revenue - a.revenue);
   const topProducts = [...products.values()].sort((a, b) => b.qty - a.qty).slice(0, 8);
 
   const coupons = new Map();

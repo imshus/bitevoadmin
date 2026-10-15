@@ -5,7 +5,7 @@ import { money } from '../lib/format.js';
 import { useToast } from '../components/Toast.jsx';
 import { PageHeader, Badge, Switch, Field, Segmented, SearchInput, Modal, useConfirm, Loading, ErrorState, EmptyState, VegMark } from '../components/ui.jsx';
 import ImageField from '../components/ImageField.jsx';
-import { Plus, Pencil, Trash, Box, Star, Layers, X } from '../components/Icons.jsx';
+import { Plus, Pencil, Trash, Box, Star, Layers, X, Tag } from '../components/Icons.jsx';
 
 const NEW_CATEGORY = '__new';
 
@@ -259,6 +259,34 @@ function ProductForm({ product, products, categories: initialCategories, onCateg
   );
 }
 
+// Lists the categories with how many products each has; empty ones can be deleted.
+function CategoryManager({ categories, onDelete }) {
+  return (
+    <div className="modal__body">
+      <p className="muted category-note">A category can be deleted once it has no products. Move its products to another category first.</p>
+      {categories.length === 0 && <p className="category-empty">No categories yet. Add one from a product form with “＋ Add a new category…”.</p>}
+      <ul className={`category-list${categories.length ? '' : ' is-empty'}`}>
+        {categories.map(c => (
+          <li key={c._id}>
+            <span className="category-list__name">{c.label}</span>
+            <span className="muted">{c.productCount} product{c.productCount === 1 ? '' : 's'}</span>
+            <button
+              type="button"
+              className="icon-btn icon-btn--danger"
+              onClick={() => onDelete(c)}
+              disabled={c.productCount > 0}
+              aria-label={`Delete ${c.label}`}
+              title={c.productCount > 0 ? 'Move or delete its products first' : `Delete ${c.label}`}
+            >
+              <Trash size={18} />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function Products() {
   usePageTitle('Products');
   const toast = useToast();
@@ -270,6 +298,7 @@ export default function Products() {
   const [category, setCategory] = useState('all');
   const [stock, setStock] = useState('all');
   const [editing, setEditing] = useState(null);
+  const [managing, setManaging] = useState(false);
 
   const all = (data || []).map(view);
   const byId = new Map(all.map(p => [p._id, p]));
@@ -304,9 +333,23 @@ export default function Products() {
 
   const outCount = all.filter(p => !p.isAvailable).length;
 
+  const deleteCategory = async c => {
+    const ok = await confirm({ title: `Delete “${c.label}”?`, message: 'It will be removed from the category list. This can’t be undone.', confirmLabel: 'Delete category', danger: true });
+    if (!ok) return;
+    try {
+      await categoryApi.remove(c._id);
+      if (category === c.key) setCategory('all');
+      await reloadCategories();
+      toast(`Category “${c.label}” deleted`);
+    } catch (err) {
+      toast(err.message, 'critical');
+    }
+  };
+
   return (
     <>
       <PageHeader eyebrow="Menu" title="Products" subtitle={data ? `${all.length} items on the menu · ${all.filter(isCombo).length} combos · ${outCount} out of stock` : 'Your menu items'}>
+        <button className="btn btn--ghost" onClick={() => setManaging(true)}><Tag size={18} />Categories</button>
         <button className="btn btn--outline" onClick={() => setEditing({ type: 'combo' })}><Layers size={18} />Add combo</button>
         <button className="btn btn--primary" onClick={() => setEditing({})}><Plus size={18} />Add product</button>
       </PageHeader>
@@ -401,6 +444,9 @@ export default function Products() {
         {editing && categories && (
           <ProductForm product={editing} products={all} categories={categories} onCategoryAdded={reloadCategories} onDone={saved => { setEditing(null); if (saved) reload(); }} />
         )}
+      </Modal>
+      <Modal open={managing} onClose={() => setManaging(false)} title="Categories">
+        {managing && categories && <CategoryManager categories={categories} onDelete={deleteCategory} />}
       </Modal>
       {confirmDialog}
     </>
