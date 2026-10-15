@@ -135,15 +135,17 @@ categories.delete('/:id', async (req, res) => {
 
 categories.post('/', async (req, res) => {
   const name = String(req.body?.label || '').trim().replace(/\s+/g, ' ');
+  const image = text(String(req.body?.image || ''), 1000);
   if (!name) throw badRequest('Enter a category name.');
   if (name.length > 40) throw badRequest('Keep the category name under 40 characters.');
+  if (image && !IMAGE_URL.test(image)) throw badRequest('Use an https:// image link or upload a photo.');
   const all = await store.find('categories');
   if (all.some(c => c.label.toLowerCase() === name.toLowerCase())) throw conflict(`“${name}” already exists. Pick it from the list.`);
   const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'category';
   let key = base;
   for (let n = 2; all.some(c => c.key === key); n++) key = `${base}-${n}`;
   const order = Math.max(0, ...all.map(c => c.order || 0)) + 1;
-  res.status(201).json(await store.insert('categories', { key, label: name, order, createdAt: nowIso() }));
+  res.status(201).json(await store.insert('categories', { key, label: name, image, order, createdAt: nowIso() }));
 });
 
 // ---- Photo uploads -------------------------------------------------------------------

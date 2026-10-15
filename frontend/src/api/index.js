@@ -57,7 +57,7 @@ export const agents = resource('/agents');
 
 export const categories = {
   list: () => get('/categories'),
-  create: label => post('/categories', { label }),
+  create: (label, image = '') => post('/categories', { label, image }),
   remove: id => request('DELETE', `/categories/${id}`),
 };
 

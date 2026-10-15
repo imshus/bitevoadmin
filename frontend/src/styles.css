@@ -638,7 +638,8 @@ textarea.input { height: auto; padding: 11px 14px; resize: vertical; }
 .saving { color: var(--good-text); font-weight: 600; }
 .category-note { font-size: 13px; margin-bottom: 12px; }
 .category-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 14px; }
-.category-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; }
+.category-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 8px 8px 8px 12px; }
+.category-list .thumb { width: 40px; height: 40px; border-radius: 12px; }
 .category-list li + li { border-top: 1px solid var(--border); }
 .category-list__name { font-weight: 600; }
 .category-list.is-empty { display: none; }

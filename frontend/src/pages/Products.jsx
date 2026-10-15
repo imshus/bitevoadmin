@@ -83,16 +83,20 @@ function ComboItems({ items, menu, onChange, error }) {
 // Popup for a new menu category. It is saved to the database straight away.
 function CategoryForm({ onSaved, onCancel }) {
   const [label, setLabel] = useState('');
+  const [image, setImage] = useState('');
   const [error, setError] = useState(null);
+  const [imageError, setImageError] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const submit = async e => {
     e.preventDefault();
-    if (!label.trim()) return setError('Enter a category name.');
+    setError(label.trim() ? null : 'Enter a category name.');
+    const badImage = image.trim() && !/^(https?:\/\/|\/uploads\/)/.test(image.trim());
+    setImageError(badImage ? 'Use a full image link starting with https://, or upload a photo.' : null);
+    if (!label.trim() || badImage) return;
     setBusy(true);
-    setError(null);
     try {
-      onSaved(await categoryApi.create(label.trim()));
+      onSaved(await categoryApi.create(label.trim(), image.trim()));
     } catch (err) {
       setError(err.message);
       setBusy(false);
@@ -102,9 +106,12 @@ function CategoryForm({ onSaved, onCancel }) {
   return (
     <form onSubmit={submit} noValidate>
       <div className="modal__body">
-        <Field label="Category name" error={error}>
-          <input className="input" value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. Rolls & Wraps" maxLength={40} data-autofocus />
-        </Field>
+        <div className="form-grid">
+          <Field label="Category name" error={error} span>
+            <input className="input" value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. Rolls & Wraps" maxLength={40} data-autofocus />
+          </Field>
+          <ImageField label="Category photo (optional)" value={image} onChange={setImage} error={imageError} alt={label} />
+        </div>
       </div>
       <div className="modal__foot">
         <button type="button" className="btn btn--ghost" onClick={onCancel}>Cancel</button>
@@ -268,6 +275,7 @@ function CategoryManager({ categories, onDelete }) {
       <ul className={`category-list${categories.length ? '' : ' is-empty'}`}>
         {categories.map(c => (
           <li key={c._id}>
+            <Thumb src={c.image} alt={c.label} />
             <span className="category-list__name">{c.label}</span>
             <span className="muted">{c.productCount} product{c.productCount === 1 ? '' : 's'}</span>
             <button
