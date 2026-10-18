@@ -1,6 +1,7 @@
 // The panel's only connection to the BiteVo backend (Node.js API in ../backend).
-// In development Vite forwards /api and /uploads to the API (see vite.config.js); in production set
-// VITE_API_URL to the API's address, e.g. https://api.bitevo.in.
+// In development Vite forwards /api and /uploads to the API (see vite.config.js). When the backend serves
+// the built panel, both share one address and VITE_API_URL stays empty; for a separate static host, set it
+// to the API's address, e.g. https://api.bitevo.in.
 import { shrinkImage } from '../lib/image.js';
 
 const BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
@@ -93,6 +94,12 @@ export const wallets = {
 
 export const customers = {
   search: query => (query.trim() ? get(`/customers?search=${encodeURIComponent(query.trim())}`) : Promise.resolve([])),
+};
+
+// Refer & earn: the website records referrals and pays the rewards; the panel can void a pending one.
+export const referrals = {
+  list: () => get('/referrals'),
+  void: (id, reason) => post(`/referrals/${id}/void`, { reason }),
 };
 
 export const sessions = {

@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "node --watch src/server.js --port 4000",
     "start": "node src/server.js",
+    "host": "npm --prefix ../frontend run build && node src/server.js",
     "seed": "node src/seed.js",
     "check-db": "node src/checkDb.js",
     "create-admin": "node src/createAdmin.js"

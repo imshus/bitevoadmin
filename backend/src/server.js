@@ -1,4 +1,5 @@
-// Starts the BiteVo admin API.
+// Starts the BiteVo admin API (and serves the built admin panel, if there is one).
+import os from 'node:os';
 import { config } from './config.js';
 import { connectStore, store } from './db/index.js';
 import { createApp } from './app.js';
@@ -23,8 +24,24 @@ if (config.demoMode) {
   console.log('Demo mode: new demo orders will keep arriving. Set DEMO_MODE=false for real use.');
 }
 
-const server = createApp().listen(config.port, () => {
+// IPv4 addresses of this computer on the local network, for opening the panel on a phone.
+function lanAddresses() {
+  return Object.values(os.networkInterfaces()).flat()
+    .filter(a => a && a.family === 'IPv4' && !a.internal && !a.address.startsWith('169.254.'))
+    .map(a => a.address);
+}
+
+const onlyThisComputer = ['127.0.0.1', 'localhost', '::1'].includes(config.host);
+const app = createApp();
+const server = app.listen(config.port, config.host, () => {
   console.log(`BiteVo admin API listening on http://localhost:${config.port}`);
+  if (app.locals.servesPanel) {
+    console.log(`Admin panel: http://localhost:${config.port}`);
+    if (onlyThisComputer) console.log('  Only this computer can open it. For phones on the same Wi-Fi, set HOST=0.0.0.0 in backend/.env.');
+    else for (const ip of lanAddresses()) console.log(`  on a phone on the same Wi-Fi: http://${ip}:${config.port}`);
+  } else {
+    console.log('Admin panel not built yet: run "npm run build" in frontend/ and restart (or use "npm run dev" there).');
+  }
 });
 
 async function shutdown() {

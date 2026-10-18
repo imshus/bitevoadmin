@@ -11,10 +11,24 @@ npm run dev
 
 The API listens on http://localhost:4000. Start the frontend separately (see `../frontend`).
 
+## Host it on this computer
+
+Run `npm install` here and in `../frontend` once, then:
+
+```bash
+npm run host
+```
+
+This builds the panel and serves the panel and the API together at **http://localhost:4000**. One process, no Vite
+dev server. `npm start` serves the last build without rebuilding. By default only this computer can open it; to use it
+from a phone on the same Wi-Fi, set `HOST=0.0.0.0` in `.env`, but set a strong admin password first, because anyone
+on that network can then reach the sign-in page.
+
 | Command | What it does |
 |---|---|
 | `npm run dev` | Runs the API on port 4000 and restarts on changes |
-| `npm start` | Runs the API for production (port from `PORT`) |
+| `npm run host` | Builds the panel (`../frontend`) and serves panel + API on port 4000 |
+| `npm start` | Runs the API for production (port from `PORT`); also serves the panel if `../frontend/dist` exists |
 | `npm run seed` | Loads demo data into an **empty** database (never touches real data) |
 | `npm run seed -- --reset` | Replaces existing *demo* data with fresh demo data |
 | `npm run check-db` | Read-only: lists the databases and collections the API can see |
@@ -70,7 +84,9 @@ is part of a combo.
 
 - Admin passwords are bcrypt hashes; sessions use an httpOnly cookie whose token is stored only as a SHA-256 hash.
 - Sign-in is rate limited (10 attempts / 15 min / IP) and logged.
-- Input is whitelisted and validated; uploads must be real images; security headers via helmet; CORS limited to `CLIENT_ORIGIN`.
+- Input is whitelisted and validated; uploads must be real images; security headers via helmet (with a
+  Content-Security-Policy for the served panel); CORS limited to `CLIENT_ORIGIN`.
+- Listens on `127.0.0.1` (this computer only) unless `HOST` says otherwise.
 
 ## Going live
 

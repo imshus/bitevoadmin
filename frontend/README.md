@@ -25,7 +25,11 @@ Sign in with the admin account listed in `../backend/README.md`.
 
 ## Production
 
-Build with the API's address and host `dist/` on any static host:
+Simplest: let the backend serve the build. `npm run build` here, then `npm start` in `../backend` (or just
+`npm run host` there, which does both). The panel and API then share one address, e.g. http://localhost:4000, and
+`VITE_API_URL` stays empty.
+
+Or build with the API's address and host `dist/` on any static host:
 
 ```bash
 VITE_API_URL=https://api.your-domain npm run build

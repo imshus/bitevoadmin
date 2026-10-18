@@ -63,4 +63,11 @@ export const WALLET_TXN = {
   admin_debit: { label: 'Deducted by admin', tone: 'warning' },
 };
 
+// Refer & earn: pending (waiting for the friend's orders) → rewarded; or void (stopped, never paid).
+export const REFERRAL_STATUS = {
+  pending: { label: 'Pending', tone: 'info' },
+  rewarded: { label: 'Rewarded', tone: 'good' },
+  void: { label: 'Voided', tone: 'critical' },
+};
+
 export const ROLE_LABEL = { admin: 'Admin', agent: 'Delivery agent', customer: 'Customer' };

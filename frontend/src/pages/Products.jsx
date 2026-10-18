@@ -205,6 +205,8 @@ function ProductForm({ product, products, categories: initialCategories, onCateg
           </Field>
           <Field label="Category" error={errors.category}>
             <select className="input" value={form.category} onChange={e => (e.target.value === NEW_CATEGORY ? setAddingCategory(true) : set('category', e.target.value))}>
+              {/* With no categories yet, a placeholder keeps "Add a new category…" selectable (so it opens the popup). */}
+              {!form.category && <option value="" disabled>Choose a category…</option>}
               {categories.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
               <option value={NEW_CATEGORY}>＋ Add a new category…</option>
             </select>

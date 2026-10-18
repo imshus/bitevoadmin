@@ -11,6 +11,7 @@ import LoginStatus from './pages/LoginStatus.jsx';
 import Analytics from './pages/Analytics.jsx';
 import Orders from './pages/Orders.jsx';
 import Wallet from './pages/Wallet.jsx';
+import Referrals from './pages/Referrals.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 export default function App() {
@@ -25,6 +26,7 @@ export default function App() {
             <Route path="products" element={<Products />} />
             <Route path="coupons" element={<Coupons />} />
             <Route path="wallet" element={<Wallet />} />
+            <Route path="referrals" element={<Referrals />} />
             <Route path="agents" element={<Agents />} />
             <Route path="logins" element={<LoginStatus />} />
             <Route path="analytics" element={<Analytics />} />
