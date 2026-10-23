@@ -12,8 +12,9 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:2001. In development, `/api` and `/uploads` are forwarded to the backend on port 4000
-(change with `API_PROXY_TARGET`).
+Open http://localhost:2001. In development, `/api` and `/uploads` are forwarded to the backend on port 4000.
+To work against another backend instead, e.g. the live one, put `API_PROXY_TARGET=https://adminapi.bitevo.in`
+in `.env` (no local backend needed then).
 
 | Command | What it does |
 |---|---|
@@ -25,7 +26,19 @@ Sign in with the admin account listed in `../backend/README.md`.
 
 ## Production
 
-Simplest: let the backend serve the build. `npm run build` here, then `npm start` in `../backend` (or just
+**On the BiteVo server (admin.bitevo.in):** run the built panel with Vite's preview server; nginx forwards
+admin.bitevo.in to port 2001, and `/api` goes on to the API in `API_PROXY_TARGET`:
+
+```bash
+cp .env.example .env          # API_PROXY_TARGET=https://adminapi.bitevo.in
+npm ci && npm run build
+pm2 start npm --name bitevo-admin-web -- run preview
+```
+
+After an update: `npm run build && pm2 restart bitevo-admin-web`. Use `preview` (the built panel), not `npm run dev`.
+Vite only answers on the host names in `ALLOWED_HOSTS` in `vite.config.js` (plus localhost).
+
+Or let the backend serve the build. `npm run build` here, then `npm start` in `../backend` (or just
 `npm run host` there, which does both). The panel and API then share one address, e.g. http://localhost:4000, and
 `VITE_API_URL` stays empty.
 
