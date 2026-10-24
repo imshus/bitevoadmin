@@ -3,6 +3,7 @@ import os from 'node:os';
 import { config } from './config.js';
 import { connectStore, store } from './db/index.js';
 import { createApp } from './app.js';
+import { storageLabel } from './lib/storage.js';
 import { seedIfEmpty, addDemoCombos } from './demo/seed.js';
 import { startSimulator } from './demo/simulator.js';
 
@@ -13,6 +14,7 @@ try {
   process.exit(1);
 }
 console.log(`Data store: ${store.label}`);
+console.log(`Photos: ${storageLabel}`);
 
 let stopSimulator = () => {};
 if (config.demoMode) {

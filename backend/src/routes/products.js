@@ -1,11 +1,9 @@
 import { Router } from 'express';
 import express from 'express';
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import { store } from '../db/index.js';
-import { config } from '../config.js';
 import { objectId } from '../lib/ids.js';
-import { badRequest, conflict, notFound, pick, nowIso } from '../lib/http.js';
+import { saveImage, imageKind, IMAGE_TYPES } from '../lib/storage.js';
+import { HttpError, badRequest, conflict, notFound, pick, nowIso } from '../lib/http.js';
 
 // ---- Products ------------------------------------------------------------------------
 
@@ -155,24 +153,22 @@ categories.post('/', async (req, res) => {
 });
 
 // ---- Photo uploads -------------------------------------------------------------------
-// The panel shrinks photos before sending them, so 5 MB is plenty.
+// POST /api/uploads with the image as the raw body (Content-Type image/jpeg, png, webp or gif) → { url }.
+// The panel shrinks photos before sending them, so 5 MB is plenty. With Supabase set up, `url` is a public
+// Supabase Storage link that the website and apps can show directly.
 
 export const uploads = Router();
 
-const SIGNATURES = [
-  { ext: 'jpg', test: b => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
-  { ext: 'png', test: b => b.subarray(0, 4).toString('hex') === '89504e47' },
-  { ext: 'webp', test: b => b.subarray(0, 4).toString() === 'RIFF' && b.subarray(8, 12).toString() === 'WEBP' },
-  { ext: 'gif', test: b => b.subarray(0, 4).toString() === 'GIF8' },
-];
-
-uploads.post('/', express.raw({ type: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], limit: '5mb' }), async (req, res) => {
-  const body = req.body;
-  if (!Buffer.isBuffer(body) || body.length < 12) throw badRequest('Send a JPG, PNG, WebP or GIF image.');
-  const kind = SIGNATURES.find(s => s.test(body));
-  if (!kind) throw badRequest('That file isn’t a supported image.');
-  await fs.mkdir(config.uploadDir, { recursive: true });
-  const name = `${objectId()}.${kind.ext}`;
-  await fs.writeFile(path.join(config.uploadDir, name), body);
-  res.status(201).json({ url: `${config.publicUrl}/uploads/${name}` });
+uploads.post('/', express.raw({ type: Object.values(IMAGE_TYPES), limit: '5mb' }), async (req, res) => {
+  if (!Buffer.isBuffer(req.body) || req.body.length < 12) throw badRequest('Send a JPG, PNG, WebP or GIF image.');
+  const ext = imageKind(req.body);
+  if (!ext) throw badRequest('That file isn’t a supported image.');
+  let url;
+  try {
+    url = await saveImage(`${objectId()}.${ext}`, req.body);
+  } catch (err) {
+    console.error(`Photo upload failed: ${err.message}`);
+    throw new HttpError(502, 'Couldn’t save the photo right now. Please try again.');
+  }
+  res.status(201).json({ url });
 });

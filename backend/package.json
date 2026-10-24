@@ -11,7 +11,8 @@
     "host": "npm --prefix ../frontend run build && node src/server.js",
     "seed": "node src/seed.js",
     "check-db": "node src/checkDb.js",
-    "create-admin": "node src/createAdmin.js"
+    "create-admin": "node src/createAdmin.js",
+    "move-uploads": "node src/moveUploads.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

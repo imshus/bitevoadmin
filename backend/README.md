@@ -32,7 +32,8 @@ on that network can then reach the sign-in page.
 | `npm run seed` | Loads demo data into an **empty** database (never touches real data) |
 | `npm run seed -- --reset` | Replaces existing *demo* data with fresh demo data |
 | `npm run check-db` | Read-only: lists the databases and collections the API can see |
-| `npm run create-admin -- --email you@bitevo.in --name "Your Name"` | Creates an admin (asks for the password) |
+| `npm run create-admin -- --email you@bitevo.in --name "Your Name"` | Creates an admin, or resets its password (asks for it) |
+| `npm run move-uploads` | Moves old `/uploads/…` photos to Supabase Storage (dry run; add `--apply`) |
 
 ## Settings (`.env`)
 
@@ -73,6 +74,20 @@ Everything is under `/api` and needs a signed-in admin, except `/api/auth/login`
 **Settings:** delivery zones, vehicle types, cancel reasons and wallet adjustment reasons live in the `settings`
 collection (document `app`); agent and order checks use them.
 
+**Photos** are uploaded with `POST /api/uploads` (signed-in admin; the image file as the raw body with
+`Content-Type: image/jpeg`, `image/png`, `image/webp` or `image/gif`; at most 5 MB). The answer is
+`201 { "url": "https://<project>.supabase.co/storage/v1/object/public/bitevo-images/<id>.jpg" }`. Save that link
+in a product's or category's `image`. It's a public Supabase Storage link, so the website (bitevo.in) and the apps
+show it as it is, with no extra setup. The `bitevo-images` bucket is created as public the first time a photo is
+saved. Without the Supabase settings, photos fall back to the local `uploads/` folder (`/uploads/<id>.jpg`).
+
+```bash
+curl -b "bitevo_admin_session=<cookie>" -H "Content-Type: image/jpeg" --data-binary @dish.jpg https://adminapi.bitevo.in/api/uploads
+```
+
+Photos uploaded before Supabase (links like `/uploads/x.jpg`) are moved with `npm run move-uploads` (dry run;
+add `--apply`, and `--from https://adminapi.bitevo.in` to fetch files that are only on the server).
+
 **Categories** are added from the panel's product form ("+ Add a new category…" opens a popup that saves the
 name straight to the `categories` collection).
 
@@ -92,7 +107,8 @@ is part of a combo.
 
 - Host on any Node.js host with the `.env` settings, `COOKIE_SECURE=true`, and `TRUST_PROXY=true` behind a proxy.
 - If the panel is on another domain: `CLIENT_ORIGIN=https://admin.your-domain`, `COOKIE_SAMESITE=none`, `PUBLIC_URL=https://api.your-domain`.
-- Uploaded photos are saved in `uploads/`. On hosts without a persistent disk, move them to S3 or Cloudinary.
+- Uploaded photos go to Supabase Storage (`SUPABASE_URL`, `SUPABASE_SECRET_KEY`), so nothing needs to stay on the
+  server's disk. Keep the secret key on the server only; it's never sent to the browser.
 
 ## Code
 

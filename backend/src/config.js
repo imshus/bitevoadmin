@@ -32,6 +32,13 @@ export const config = {
   mongoDbName: process.env.MONGO_DB_NAME || 'bitevo',
   // Without MongoDB the API stores data in this JSON file instead (handy for offline work).
   dataFile: process.env.DATA_FILE || path.join(backendDir, 'data', 'db.json'),
+  // Uploaded photos go to a public Supabase Storage bucket when SUPABASE_URL and SUPABASE_SECRET_KEY are set,
+  // so their links work on every BiteVo site; otherwise they are saved in uploadDir.
+  supabase: {
+    url: (process.env.SUPABASE_URL || '').replace(/\/+$/, ''),
+    key: process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    bucket: process.env.SUPABASE_BUCKET || 'bitevo-images',
+  },
   uploadDir: process.env.UPLOAD_DIR || path.join(backendDir, 'uploads'),
   // The built admin panel (`npm run build` in frontend/). When it exists, the API serves it too,
   // so the whole panel runs from one address, e.g. http://localhost:4000.
