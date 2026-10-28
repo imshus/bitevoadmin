@@ -10,7 +10,7 @@ import { Plus, Pencil, Trash, Box, Star, Layers, X, Tag } from '../components/Ic
 const NEW_CATEGORY = '__new';
 
 const EMPTY = {
-  type: 'single', name: '', heading: '', category: '', price: '', mrp: '', prepTimeMins: 20, description: '',
+  type: 'single', name: '', heading: '', category: '', price: '', mrp: '', halfPrice: '', prepTimeMins: 20, description: '',
   image: '', isVeg: true, isAvailable: true, isBestseller: false, comboItems: [],
 };
 
@@ -43,6 +43,10 @@ function validate(f) {
   if (!f.category) e.category = 'Pick a category.';
   if (!(Number(f.price) > 0)) e.price = 'Enter a price above ₹0.';
   if (f.mrp !== '' && f.mrp != null && Number(f.mrp) < Number(f.price)) e.mrp = 'MRP can’t be lower than the price.';
+  if (!isCombo(f) && f.halfPrice !== '' && f.halfPrice != null) {
+    if (!(Number(f.halfPrice) > 0)) e.halfPrice = 'Enter a price above ₹0, or leave it empty.';
+    else if (Number(f.price) > 0 && Number(f.halfPrice) >= Number(f.price)) e.halfPrice = 'The half plate should cost less than the full plate.';
+  }
   if (!(Number(f.prepTimeMins) > 0) && !(isCombo(f) && f.prepTimeMins === '')) e.prepTimeMins = 'Enter the prep time in minutes.';
   if (f.image && !/^(https?:\/\/|\/uploads\/)/.test(f.image.trim())) e.image = 'Use a full image link starting with https://, or upload a photo.';
   return e;
@@ -133,6 +137,7 @@ function ProductForm({ product, products, categories: initialCategories, onCateg
     ...product,
     comboItems: product?.comboItems?.length ? product.comboItems.map(({ productId, qty }) => ({ productId, qty })) : combo && !product._id ? [{ productId: '', qty: 1 }, { productId: '', qty: 1 }] : [],
     mrp: product?.mrp ?? '',
+    halfPrice: product?.halfPrice ?? '',
   }));
   const menu = products.filter(p => !isCombo(p));
   const chosen = form.comboItems.filter(i => i.productId);
@@ -164,6 +169,7 @@ function ProductForm({ product, products, categories: initialCategories, onCateg
       price: Number(form.price),
       // A combo's MRP defaults to what its dishes cost separately, so the saving shows.
       mrp: form.mrp === '' ? (combo && worth > Number(form.price) ? worth : null) : Number(form.mrp),
+      halfPrice: combo || form.halfPrice === '' ? null : Number(form.halfPrice),
       prepTimeMins: form.prepTimeMins === '' && combo ? comboPrep || 20 : Number(form.prepTimeMins),
       description: form.description.trim(),
       image: form.image.trim(),
@@ -244,6 +250,11 @@ function ProductForm({ product, products, categories: initialCategories, onCateg
               <input className="input" type="number" min="1" inputMode="numeric" value={form.prepTimeMins} onChange={e => set('prepTimeMins', e.target.value)} placeholder={combo && comboPrep ? String(comboPrep) : undefined} />
             </Field>
           </div>
+          {!combo && (
+            <Field label="Half plate price (₹)" error={errors.halfPrice} hint="Optional. When set, customers choose a half or a full plate; the price above is the full plate.">
+              <input className="input" type="number" min="1" inputMode="numeric" value={form.halfPrice} onChange={e => set('halfPrice', e.target.value)} placeholder="No half plate" />
+            </Field>
+          )}
           <ImageField value={form.image} onChange={v => set('image', v)} error={errors.image} alt={form.name} />
           <Field label="Description" span>
             <textarea className="input" rows="3" value={form.description} onChange={e => set('description', e.target.value)} />
@@ -484,6 +495,7 @@ export default function Products() {
                     <td className="nowrap">{categoryLabel[p.category] || p.category}</td>
                     <td className="num">
                       <strong>{money(p.price)}</strong>
+                      {p.halfPrice > 0 && <div className="cell-sub">Half {money(p.halfPrice)}</div>}
                       {was && <div className="cell-sub"><s>{money(was)}</s></div>}
                       {was && <div className="cell-sub saving">Save {money(was - p.price)}</div>}
                     </td>

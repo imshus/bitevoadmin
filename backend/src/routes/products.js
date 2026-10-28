@@ -9,7 +9,8 @@ import { HttpError, badRequest, conflict, notFound, pick, nowIso } from '../lib/
 
 export const products = Router();
 
-const PRODUCT_FIELDS = ['type', 'name', 'heading', 'category', 'price', 'mrp', 'isVeg', 'description', 'prepTimeMins', 'isAvailable', 'isBestseller', 'image', 'comboItems'];
+// `halfPrice`: optional. When set, the website offers the dish as a half plate (this price) or a full plate (`price`).
+const PRODUCT_FIELDS = ['type', 'name', 'heading', 'category', 'price', 'mrp', 'halfPrice', 'isVeg', 'description', 'prepTimeMins', 'isAvailable', 'isBestseller', 'image', 'comboItems'];
 const IMAGE_URL = /^(https?:\/\/|\/uploads\/)/;
 
 const text = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : v);
@@ -21,6 +22,7 @@ function normalizeProduct(body) {
   }
   for (const field of ['price', 'prepTimeMins']) if (field in p) p[field] = Number(p[field]);
   if ('mrp' in p) p.mrp = p.mrp === null || p.mrp === '' ? null : Number(p.mrp);
+  if ('halfPrice' in p) p.halfPrice = p.halfPrice === null || p.halfPrice === '' || Number(p.halfPrice) === 0 ? null : Number(p.halfPrice);
   for (const field of ['isVeg', 'isAvailable', 'isBestseller']) if (field in p) p[field] = Boolean(p[field]);
   if ('type' in p) p.type = p.type === 'combo' ? 'combo' : 'single';
   if ('comboItems' in p) {
@@ -54,6 +56,11 @@ async function validateProduct(p) {
   if (!(await store.findOne('categories', { key: p.category }))) throw badRequest('Pick a valid category.');
   if (!(p.price > 0)) throw badRequest('Price must be more than ₹0.');
   if (p.mrp != null && !(p.mrp >= p.price)) throw badRequest('MRP can’t be lower than the price.');
+  if (p.halfPrice != null) {
+    if (p.type === 'combo') throw badRequest('Combos don’t come as a half plate.');
+    if (!(p.halfPrice > 0)) throw badRequest('Half plate price must be more than ₹0, or leave it empty.');
+    if (!(p.halfPrice < p.price)) throw badRequest('The half plate should cost less than the full plate.');
+  }
   if (!(Number.isInteger(p.prepTimeMins) && p.prepTimeMins > 0 && p.prepTimeMins <= 240)) throw badRequest('Prep time must be 1–240 minutes.');
   if (p.image && !IMAGE_URL.test(p.image)) throw badRequest('Use an https:// image link or upload a photo.');
   if (p.type === 'combo') {
@@ -68,8 +75,8 @@ products.get('/', async (req, res) => {
 });
 
 products.post('/', async (req, res) => {
-  const doc = { type: 'single', heading: '', description: '', image: '', mrp: null, isVeg: true, isAvailable: true, isBestseller: false, ...normalizeProduct(req.body) };
-  if (doc.type === 'combo') Object.assign(doc, await resolveCombo(doc.comboItems || []));
+  const doc = { type: 'single', heading: '', description: '', image: '', mrp: null, halfPrice: null, isVeg: true, isAvailable: true, isBestseller: false, ...normalizeProduct(req.body) };
+  if (doc.type === 'combo') Object.assign(doc, await resolveCombo(doc.comboItems || []), { halfPrice: null });
   else delete doc.comboItems;
   await validateProduct(doc);
   const now = nowIso();
