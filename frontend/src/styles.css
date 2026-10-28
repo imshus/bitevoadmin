@@ -586,6 +586,13 @@ textarea.input { height: auto; padding: 11px 14px; resize: vertical; }
 .order-details__top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .order-details__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .order-details section p + p { margin-top: 2px; }
+.order-address__lines { display: flex; flex-direction: column; margin: 6px 0 4px; font-style: normal; line-height: 1.45; }
+.order-address__lines span:first-child { font-weight: 600; }
+.order-address__note { margin-top: 8px; padding: 8px 12px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); }
+.order-address__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.cell-address { display: flex; align-items: center; gap: 4px; max-width: 260px; }
+.cell-address svg { flex: none; }
+.cell-address span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bill { width: 100%; border-collapse: collapse; }
 .bill td { padding: 7px 0; border-bottom: 1px dashed var(--border); }
 .bill td svg { vertical-align: -2px; color: var(--brand-ink); }

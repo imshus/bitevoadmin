@@ -5,7 +5,8 @@ import { money, num, timeAgo, dateTime } from '../lib/format.js';
 import { ORDER_STATUS, AGENT_STATUS } from '../lib/status.js';
 import { useToast } from '../components/Toast.jsx';
 import { PageHeader, Badge, Segmented, SearchInput, Modal, Loading, ErrorState, EmptyState, StatTile, Pagination, Field } from '../components/ui.jsx';
-import { Bag, Flame, Clock, Check, XCircle, Refresh, Ticket, Wallet } from '../components/Icons.jsx';
+import { Bag, Flame, Clock, Check, XCircle, Refresh, Ticket, Wallet, MapPin, Copy } from '../components/Icons.jsx';
+import { addressLines, shortAddress, mapsLink } from '../lib/address.js';
 
 const PAGE_SIZE = 20;
 const AUTO_REFRESH_MS = 30000;
@@ -99,6 +100,63 @@ function CancelPanel({ order, reasons, onCancel, onBack, busy }) {
   );
 }
 
+// Copies text; where the Clipboard API is blocked (some phones and in-app browsers), falls back to a hidden
+// text box inside `host` (the open dialog, since everything outside a modal dialog can't be selected).
+async function copyText(text, host) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return;
+  } catch { /* try the older way */ }
+  const box = document.createElement('textarea');
+  box.value = text;
+  box.setAttribute('readonly', '');
+  box.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+  host.appendChild(box);
+  box.select();
+  const ok = document.execCommand('copy');
+  box.remove();
+  if (!ok) throw new Error('Copy failed');
+}
+
+// Where the order goes: the address the customer saved on the website, their note, and a map link.
+function DeliveryAddress({ order }) {
+  const toast = useToast();
+  const a = order.address;
+  const lines = addressLines(a);
+  const maps = mapsLink(a);
+
+  const copy = async e => {
+    try {
+      await copyText([order.customerName, order.customerPhone, ...lines].filter(Boolean).join('\n'), e.currentTarget.closest('dialog') || document.body);
+      toast('Address copied');
+    } catch {
+      toast('Couldn’t copy. Select the address and copy it instead.', 'critical');
+    }
+  };
+
+  return (
+    <section className="order-address">
+      <h3>Delivery address</h3>
+      {lines.length ? (
+        <>
+          {a.label && <Badge tone="neutral">{a.label}</Badge>}
+          <address className="order-address__lines">{lines.map(l => <span key={l}>{l}</span>)}</address>
+          {(a.zone || order.zone) && <p className="muted">Zone: {a.zone || order.zone}</p>}
+        </>
+      ) : (
+        <p className="muted">No street address on this order{order.zone ? ` · Zone: ${order.zone}` : ''}.</p>
+      )}
+      {order.note && <p className="order-address__note"><strong>Customer’s note:</strong> {order.note}</p>}
+      {lines.length > 0 && (
+        <div className="order-address__actions">
+          {maps && <a className="btn btn--sm btn--outline" href={maps} target="_blank" rel="noopener noreferrer"><MapPin size={16} />Open in Google Maps</a>}
+          <button type="button" className="btn btn--sm btn--ghost" onClick={copy}><Copy size={16} />Copy address</button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function OrderDetails({ id, onChanged }) {
   const toast = useToast();
   const { data: order, loading, error, reload } = useApi(() => api.get(id), [id]);
@@ -148,7 +206,6 @@ function OrderDetails({ id, onChanged }) {
             <h3>Customer</h3>
             <p><strong>{order.customerName}</strong></p>
             <p className="muted">{order.customerPhone}</p>
-            <p className="muted">{order.zone}</p>
           </section>
           <section>
             <h3>Payment</h3>
@@ -157,6 +214,8 @@ function OrderDetails({ id, onChanged }) {
             {order.refund && <p className="muted">Refunded {money(order.refund.amount)} to {order.refund.to === 'wallet' ? 'BiteVo wallet' : 'original payment'}</p>}
           </section>
         </div>
+
+        <DeliveryAddress order={order} />
 
         <section>
           <h3>Items ({itemCount(order)})</h3>
@@ -263,7 +322,7 @@ export default function Orders() {
 
   const all = data || [];
   const q = query.trim().toLowerCase();
-  const searched = all.filter(o => !q || `${o.orderNo} ${o.customerName} ${o.customerPhone} ${o.agentName || ''}`.toLowerCase().includes(q));
+  const searched = all.filter(o => !q || `${o.orderNo} ${o.customerName} ${o.customerPhone} ${o.agentName || ''} ${addressLines(o.address).join(' ')}`.toLowerCase().includes(q));
   const rows = searched.filter(STATUS_FILTERS.find(f => f.value === status).match);
   const shown = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const count = key => all.filter(o => o.status === key).length;
@@ -299,7 +358,7 @@ export default function Orders() {
       </div>
 
       <div className="toolbar">
-        <SearchInput value={query} onChange={setQuery} placeholder="Search order, customer or agent" />
+        <SearchInput value={query} onChange={setQuery} placeholder="Search order, customer, address or agent" />
         <select className="input input--auto" value={days} onChange={e => setDays(Number(e.target.value))} aria-label="Date range">
           {RANGES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
         </select>
@@ -337,6 +396,7 @@ export default function Orders() {
                         <td className="nowrap">
                           <div className="cell-title">{o.customerName}</div>
                           <div className="cell-sub">{o.customerPhone}</div>
+                          {o.address && <div className="cell-sub cell-address" title={addressLines(o.address).join(', ')}><MapPin size={12} /><span>{shortAddress(o.address)}</span></div>}
                         </td>
                         <td>
                           <div>{itemsSummary(o)}{o.items.length > 1 && <span className="muted"> + {o.items.length - 1} more</span>}</div>

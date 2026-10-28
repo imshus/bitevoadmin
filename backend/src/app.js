@@ -11,6 +11,7 @@ import { config } from './config.js';
 import { store } from './db/index.js';
 import { requireAdmin, clearSessionCookie } from './auth.js';
 import { errorHandler, forbidden } from './lib/http.js';
+import { usesSupabase } from './lib/storage.js';
 import { router as authRoutes } from './routes/auth.js';
 import { products, categories, uploads } from './routes/products.js';
 import { router as couponRoutes } from './routes/coupons.js';
@@ -54,7 +55,8 @@ export function createApp() {
   app.use('/uploads', (req, res) => res.status(404).end());
   app.use('/api', express.json({ limit: '200kb' }));
 
-  app.get('/api/health', (req, res) => res.json({ ok: true, store: store.kind, demoMode: config.demoMode }));
+  // `photos` says where uploads go ("supabase", or "local" when SUPABASE_URL / SUPABASE_SECRET_KEY are missing).
+  app.get('/api/health', (req, res) => res.json({ ok: true, store: store.kind, demoMode: config.demoMode, photos: usesSupabase ? 'supabase' : 'local' }));
   app.use('/api/auth', authRoutes);
 
   // Everything below needs a signed-in admin.
