@@ -54,8 +54,14 @@ The backend must list this site in `CLIENT_ORIGIN`.
 
 ## Pages
 
-Dashboard · Orders · Products (with **combos**, photo upload, custom categories, headings) · Coupons (percentage,
-flat, free delivery, free product, wallet cashback) · Wallet · Delivery agents · Login status · Analytics.
+Dashboard · Orders · Live map · Products (with **combos**, photo upload, custom categories, headings) · Coupons
+(percentage, flat, free delivery, free product, wallet cashback) · Wallet · Delivery agents · Login status · Analytics.
+
+**Live map:** every online rider on a map (OpenStreetMap, no key), updated every 5 seconds from the delivery partner
+app: on delivery, free or no signal, where they're heading and the route driven so far. The list shows each rider's
+distance to the customer (or the kitchen before pickup) with a time estimate, km ridden and orders delivered today.
+Orders waiting for a rider, or stuck with one who went offline, can be assigned there, nearest rider first. The map
+library loads only on this page.
 
 **Categories:** in the product form, *+ Add a new category…* opens a popup; the new category is saved to the
 database immediately and selected.

@@ -79,6 +79,12 @@ export const uploads = {
   },
 };
 
+// Live map: online riders with their latest position (sent by the delivery partner app) and orders.
+export const live = {
+  get: () => get('/live'),
+  track: orderId => get(`/live/orders/${orderId}/track`),
+};
+
 export const orders = {
   list: ({ days = 1 } = {}) => get(`/orders?days=${days}`),
   get: id => get(`/orders/${id}`),

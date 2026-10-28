@@ -20,6 +20,13 @@ function mongoUri() {
 
 const list = value => (value || '').split(',').map(s => s.trim()).filter(Boolean);
 
+// The kitchen's position for the Live map page (optional; the same values as the delivery app's .env).
+function kitchen() {
+  const lat = parseFloat(process.env.KITCHEN_LAT);
+  const lng = parseFloat(process.env.KITCHEN_LNG);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? { name: process.env.KITCHEN_NAME || 'BiteVo Kitchen', lat, lng } : null;
+}
+
 // `--port 4000` on the command line wins over PORT (the dev script pins the API to 4000).
 const argPort = Number(process.argv[process.argv.indexOf('--port') + 1] || 0) || 0;
 
@@ -47,6 +54,7 @@ export const config = {
   publicUrl: (process.env.PUBLIC_URL || '').replace(/\/$/, ''),
   // Origins of the admin frontend allowed to call the API with cookies.
   clientOrigins: list(process.env.CLIENT_ORIGIN || 'http://localhost:2001'),
+  kitchen: kitchen(),
   // Demo mode seeds an empty database with dummy data and simulates new orders arriving.
   demoMode: process.env.DEMO_MODE !== 'false',
   cookie: {

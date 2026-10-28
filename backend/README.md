@@ -64,6 +64,7 @@ Everything is under `/api` and needs a signed-in admin, except `/api/auth/login`
 | Menu | `GET/POST /products`, `PATCH/DELETE /products/:id`, `GET/POST /categories`, `POST /uploads` (raw image body) |
 | Offers | `GET/POST /coupons`, `PATCH/DELETE /coupons/:id` |
 | Orders | `GET /orders?days=1`, `GET /orders/:id`, `POST /orders/:id/advance`, `/assign`, `/cancel` |
+| Live map | `GET /live` (online riders, their position and orders; orders waiting for a rider), `GET /live/orders/:id/track` |
 | Wallets | `GET /wallets`, `POST /wallets/:customerId/adjustments`, `GET /customers?search=` |
 | Team | `GET/POST /agents`, `PATCH/DELETE /agents/:id` |
 | Login status | `GET /sessions`, `POST /sessions/:id/revoke`, `GET /login-events` |
@@ -73,6 +74,11 @@ Everything is under `/api` and needs a signed-in admin, except `/api/auth/login`
 
 **Settings:** delivery zones, vehicle types, cancel reasons and wallet adjustment reasons live in the `settings`
 collection (document `app`); agent and order checks use them.
+
+**Live map:** riders' positions come from the delivery partner app (`../../DeliveryBoyApplication`), which shares this
+database: it writes `agents.location` every few seconds while a rider is online, and each point of an order's route
+into `riderTrack`. Set `KITCHEN_LAT` / `KITCHEN_LNG` (the same values as the delivery app's) to show the kitchen and
+measure riders' distance to it; without them, distances are to the customer.
 
 **Photos** are uploaded with `POST /api/uploads` (signed-in admin; the image file as the raw body with
 `Content-Type: image/jpeg`, `image/png`, `image/webp` or `image/gif`; at most 5 MB). The answer is
